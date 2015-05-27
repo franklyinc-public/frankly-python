@@ -69,10 +69,10 @@ class TestFranklyClient(TestCase):
             room = client.update_room(
                 room.id,
                 title       = 'Not the best room ever',
-                description = 'Nah, actually this is not the best room ever...',
+                description = 'Actually not the best room ever.',
             )
             self.assertEqual(room.title, 'Not the best room ever')
-            self.assertEqual(room.description, 'Nah, actually this is not the best room ever...')
+            self.assertEqual(room.description, 'Actually not the best room ever.')
 
             room = client.update_room(room.id, status='active')
             self.assertEqual(room.status, 'active')
@@ -174,8 +174,8 @@ class TestFranklyClient(TestCase):
             a2 = client.read_announcement(a1.id)
             self.assertEqual(a1, a2)
 
-            client.publish_announcement(a1.id, r1.id)
-            client.publish_announcement(a1.id, r2.id)
+            client.create_room_message(r1.id, announcement=a1.id)
+            client.create_room_message(r2.id, announcement=a2.id)
 
             rooms = client.read_announcement_room_list(a1.id)
             self.assertEqual(rooms, [r1, r2])
