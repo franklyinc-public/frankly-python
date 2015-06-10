@@ -12,8 +12,8 @@ $ pip install git+https://github.com/franklyinc/frankly-python.git#egg=frankly
 
 ###Documentation
 
-The documentation generated from [pdoc](https://github.com/BurntSushi/pdoc)
-can be found [here](http://franklyinc.github.io/frankly-python/).
+Please fine the complete Python integration guide and API reference, generated from [pdoc](https://github.com/BurntSushi/pdoc), at
+[http://franklyinc.github.io/frankly-python](http://franklyinc.github.io/frankly-python/).
 
 
 ###Making Improvements
