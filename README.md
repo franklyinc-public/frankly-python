@@ -18,7 +18,7 @@ Please fine the complete Python integration guide and API reference, generated f
 
 ###Making Improvements
 
-Frankly Platform provides a great way for brands to integrate chat in their iOS, Android, and Web apps in order to build and engage their communities. But of course, that's not possible without developers like you. Have ideas for improving the integration experience? Let us know by creating a Github issue in this repo!
+Frankly Platform provides a great way for brands to integrate chat in their iOS, Android, and Web apps in order to build and engage their communities. But of course, that's not possible without developers like you. Have ideas for improving the integration experience? Let us know by [creating a Github issue in this repo](https://github.com/franklyinc/frankly-python/issues/new)!
 
 
 ###Access & Support
