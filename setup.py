@@ -15,6 +15,7 @@ if __name__ == '__main__':
           ],
           packages          = [
               'frankly',
+              'frankly.websocket',
           ],
           install_requires  = [
               'python-dateutil>=2.4.2',
