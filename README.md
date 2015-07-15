@@ -8,7 +8,7 @@ Installation
 The frankly module can be installed like most python modules using pip:
 
 ```
-$ pip install git+https://github.com/franklyinc/frankly-python.git#egg=frankly
+$ pip install frankly-python
 ```
 
 **Compatiblity**
