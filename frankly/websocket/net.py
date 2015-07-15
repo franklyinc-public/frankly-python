@@ -47,6 +47,7 @@ from socket import TCP_NODELAY
 from types import MethodType
 import os
 import six
+import ssl
 import socket as pysocket
 
 __all__ = [
@@ -74,12 +75,14 @@ def getprototype(protocol):
 class socket(object):
 
     if six.PY3:
-        def __init__(self, family, socktype=SOCK_STREAM, protocol=0, fileno=None, timeout=None, socket=None):
+        def __init__(self, family, socktype=SOCK_STREAM, protocol=0, fileno=None, timeout=None, socket=None, secure=False, **kwargs):
             self._socket = socket if socket is not None else pysocket.socket(family, socktype, protocol, fileno)
             self.timeout = timeout
+            if secure:
+                self._socket = ssl.wrap_socket(self._socket, **kwargs)
 
     else:
-        def __init__(self, family, socktype=SOCK_STREAM, protocol=0, fileno=None, timeout=None, socket=None):
+        def __init__(self, family, socktype=SOCK_STREAM, protocol=0, fileno=None, timeout=None, socket=None, secure=False, **kwargs):
             if socket is not None:
                 self._socket = socket
 
@@ -95,6 +98,8 @@ class socket(object):
                     os.close(fileno)
 
             self.timeout = timeout
+            if secure:
+                self._socket = ssl.wrap_socket(self._socket, **kwargs)
 
     def close(self):
         return self._socket.close()
@@ -119,6 +124,9 @@ class socket(object):
     def listen(self, backlog=SOMAXCONN):
         return self._socket.listen(backlog)
 
+    def read(self, size):
+        return self.recv(size)
+
     def recv(self, size, flags=0):
         return self._socket.recv(size, flags)
 
@@ -127,6 +135,9 @@ class socket(object):
 
     def recv_into(self, buf, size=0, flags=0):
         return self._socket.recv_into(buf, size, flags)
+
+    def write(self, data):
+        return self.sendall(data)
 
     def send(self, data, flags=0):
         return self._socket.send(data, flags)
@@ -195,6 +206,10 @@ class socket(object):
     def protocol(self):
         return self.getprotocol()
 
+    @property
+    def secure(self):
+        return isinstance(self._socket, ssl.SSLSocket)
+
     if six.PY3:
         def recvmsg(self, size, ancbufsize=0, flags=0):
             return self._socket.recvmsg(size, ancbufsize, flags)
@@ -202,17 +217,17 @@ class socket(object):
         def sendmsg(self, buffers, ancdata=tuple(), flags=0, address=None):
             return self._socket.sendmsg(buffers, ancdata, flags, address)
 
-def bind(address=None, port=None, backlog=SOMAXCONN, timeout=None, fileno=None, protocol='tcp'):
+def bind(address=None, port=None, backlog=SOMAXCONN, timeout=None, fileno=None, protocol='tcp', secure=False, **kwargs):
     socktype, protocol = getprototype(protocol)
 
     if fileno is not None:
-        return socket(AF_INET, socktype, protocol, fileno=fileno, timeout=timeout)
+        return socket(AF_INET, socktype, protocol, fileno=fileno, timeout=timeout, secure=secure, **kwargs)
 
     error = None
 
     for addrinfo in getaddrinfo(address, port, socktype, protocol, flags=AI_PASSIVE):
         family, type, proto, _, sockaddr = addrinfo
-        server = socket(family, type, proto, timeout=timeout)
+        server = socket(family, type, proto, timeout=timeout, secure=secure, **kwargs)
         try:
             server.settimeout(timeout)
             server.setreuseaddr(True)
@@ -231,17 +246,17 @@ def bind(address=None, port=None, backlog=SOMAXCONN, timeout=None, fileno=None, 
         raise error
     raise socket.error('failed to listen on %s' % repr((address, port)))
 
-def connect(host, port, timeout=None, fileno=None, protocol='tcp'):
+def connect(host, port, timeout=None, fileno=None, protocol='tcp', secure=False, **kwargs):
     socktype, protocol = getprototype(protocol)
 
     if fileno is not None:
-        return socket(AF_INET, socktype, protocol, fileno=fileno, timeout=timeout)
+        return socket(AF_INET, socktype, protocol, fileno=fileno, timeout=timeout, secure=secure, **kwargs)
 
     error = None
 
     for addrinfo in getaddrinfo(host, port, socktype, protocol):
         family, type, proto, _, sockaddr = addrinfo
-        client = socket(family, type, proto)
+        client = socket(family, type, proto, secure=secure, **kwargs)
         try:
             if proto == IPPROTO_TCP:
                 client.setnodelay(True)

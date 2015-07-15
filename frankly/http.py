@@ -43,6 +43,8 @@ from . import util
 
 __all__ = [
     'Backend',
+    'decode_response_payload',
+    'encode_request_payload',
 ]
 
 class Backend(events.Emitter):
@@ -54,7 +56,6 @@ class Backend(events.Emitter):
         assert url.scheme in ('http', 'https'), "http backend cannot connect to " + address
 
         self.address = url.scheme + '://' + url.netloc
-        self.cookies = { }
         self.headers = { 'Accept': 'application/json', 'User-Agent' : auth.USER_AGENT }
         self.workers = None
         self.opened  = False
@@ -62,7 +63,7 @@ class Backend(events.Emitter):
         if session.cookies is not None:
             cookie = session.cookies.get('app-token')
             if cookie is not None:
-                self.cookies['app-token'] = cookie
+                self.headers['Cookie'] = 'app-token=' + cookie
         else:
             if session.key is not None:
                 self.headers['Frankly-App-Key'] = session.key
@@ -118,11 +119,10 @@ class Backend(events.Emitter):
     def _send(self, packet, timeout=None):
         try:
             content = None
-            cookies = copy(self.cookies)
             headers = copy(self.headers)
 
             if packet.payload is not None:
-                content = json.dumps(packet.payload, cls=util.JsonEncoder)
+                content = encode_request_payload(packet.payload)
                 headers.update({
                     'Content-Length' : len(content),
                     'Content-Type'   : 'application/json',
@@ -132,7 +132,6 @@ class Backend(events.Emitter):
                 method  = make_method(packet.type),
                 url     = self.address + '/' + os.path.join(*packet.path),
                 headers = headers,
-                cookies = cookies,
                 params  = packet.params,
                 data    = content,
                 timeout = timeout,
@@ -145,15 +144,12 @@ class Backend(events.Emitter):
 
         try:
             status = response.status_code
+            result = decode_response_payload(response.text)
 
             if status < 200 or status >= 300:
-                raise errors.Error(packet.operation, packet.path, status, response.json(cls=util.JsonDecoder))
+                raise errors.Error(packet.operation, packet.path, status, result)
 
-            content = response.text
-
-            if len(content) == 0:
-                return None
-            return json.loads(content, cls=util.JsonDecoder)
+            return result
         finally:
             response.close()
 
@@ -163,3 +159,11 @@ def make_method(type):
     if type == 2: return 'PUT'
     if type == 3: return 'DELETE'
     assert False, "invalid packet type: " + type
+
+def decode_response_payload(payload, default=None):
+    if len(payload) == 0:
+        return default
+    return json.loads(payload, cls=util.JsonDecoder)
+
+def encode_request_payload(payload):
+    return json.dumps(payload, cls=util.JsonEncoder)

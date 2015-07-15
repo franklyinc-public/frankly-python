@@ -35,12 +35,25 @@ from . import errors
 from . import logger as log
 
 __all__ = [
+    'OK',
+    'ERROR',
+    'READ',
+    'CREATE',
+    'UPDATE',
+    'DELETE',
     'RequestStore',
     'Request',
     'Packet',
     'encode',
     'decode',
 ]
+
+OK     = 0
+ERROR  = 1
+READ   = 0
+CREATE = 1
+UPDATE = 2
+DELETE = 3
 
 class RequestStore(object):
 
@@ -200,10 +213,10 @@ def decode(chunk):
     return packet
 
 def type_string(t):
-    if t == 0: return 'read'
-    if t == 1: return 'create'
-    if t == 2: return 'update'
-    if t == 3: return 'delete'
+    if t == READ:   return 'read'
+    if t == CREATE: return 'create'
+    if t == UPDATE: return 'update'
+    if t == DELETE: return 'delete'
     return 'unknown'
 
 def path_string(p):

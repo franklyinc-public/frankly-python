@@ -37,7 +37,7 @@ class Error(Exception):
     def __init__(self, operation, path, status, reason):
         Exception.__init__(self, '[%s] %s' % (status, reason))
 
-        if isinstance(path, list):
+        if isinstance(path, tuple) or isinstance(path, list):
             if len(path) == 0:
                 path = '/'
             else:

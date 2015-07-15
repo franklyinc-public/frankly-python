@@ -27,8 +27,11 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from copy import copy
+from six.moves import urllib
+urlparse   = urllib.parse.urlparse
+urlunparse = urllib.parse.urlunparse
 
-import mimetypes
+import requests
 import six
 import threading
 import time
@@ -55,12 +58,12 @@ class BaseClient(events.Emitter):
         events.Emitter.__init__(self, logger=log)
 
         # Immutable members of the client object.
-        self._lock    = threading.Lock()
-        self._Backend = None
-        self._running = False
-        self._async   = async
-        self._url     = url
-        self._address = url.scheme + '://' + url.netloc
+        self._lock            = threading.Lock()
+        self._BackendClass    = None
+        self._running         = False
+        self._async           = async
+        self._url             = url
+        self._address         = url.scheme + '://' + url.netloc
         self._connect_timeout = connect_timeout
         self._request_timeout = request_timeout
 
@@ -81,11 +84,11 @@ class BaseClient(events.Emitter):
             # requests.
             if async:
                 workers.start_once()
-            self._Backend = http.Backend
+            self._BackendClass = http.Backend
             return
 
         if self._url.scheme in ('ws', 'wss'):
-            self._Backend = ws.Backend
+            self._BackendClass = ws.Backend
             return
 
         raise TypeError("url scheme is none of http, https, ws or wss: " + self._address)
@@ -95,7 +98,7 @@ class BaseClient(events.Emitter):
             "the identity token generator must be a callable"
 
         address = self._address
-        timeout = self._connect_timeout + self._request_timeout
+        timeout = self._request_timeout
         return self._open(lambda: auth.authenticate(address, generate_identity_token, timeout), ready=False)
 
     def _open_with_key_and_secret(self, app_key, app_secret, user=None, role=None):
@@ -129,6 +132,7 @@ class BaseClient(events.Emitter):
             #
             if not ready or self._async or self._url.scheme in ('ws', 'wss'):
                 log.debug("starting async backend to %s", self._address)
+                async.workers.start_once()
                 self._pending = fmp.RequestStore()
                 self._timer   = async.Timer(1, self._pulse)
                 self._worker  = async.Worker(lambda jobs: self._run(jobs, authenticator, self._version))
@@ -142,8 +146,8 @@ class BaseClient(events.Emitter):
             log.debug("authenticated with %s", session)
 
             log.debug("opening sync backend to %s", self._address)
-            self._backend = self._Backend(self._address, session)
-            self._backend.open(async=False)
+            self._backend = self._BackendClass(self._address, session)
+            self._backend.open(timeout=self._connect_timeout, async=False)
 
         # There's no worker to fire these events, we use the current thread to emulate the
         # behavior of the asynchronous worker.
@@ -214,7 +218,8 @@ class BaseClient(events.Emitter):
 
         timeout = self._request_timeout
         expire  = time.time() + timeout
-        packet  = fmp.Packet(operation, 0, 0, format_path(path), params, payload)
+        path    = [six.text_type(x) for x in path]
+        packet  = fmp.Packet(operation, 0, 0, path, params, payload)
 
         with self._lock:
             if not self._running:
@@ -226,7 +231,7 @@ class BaseClient(events.Emitter):
         # No worker is available, the client has direct ownership of the backend, simply
         # sending the request in blocking mode.
         if worker is None:
-            return backend.send(packet, timeout)
+            return backend.send(packet, timeout=timeout)
 
         # When a worker is available we schedule the request to be executed
         # asynchronously.
@@ -244,8 +249,38 @@ class BaseClient(events.Emitter):
         # for the promise to be resolved.
         return promise.wait(timeout)
 
-    def _upload(self, url, params=None, payload=None, content_length=None, content_type=None, content_encoding=None):
-        pass
+    def _upload(self, url, params=None, content=None, content_length=None, content_type=None, content_encoding=None, timeout=None, emitter=None):
+        uploader = Uploader(
+            url              = url,
+            params           = params,
+            content          = content,
+            content_length   = content_length,
+            content_type     = content_type,
+            content_encoding = content_encoding,
+            emitter          = emitter,
+        )
+
+        if timeout is None:
+            timeout = max(self._request_timeout, content_length / 1000)
+
+        with self._lock:
+            if not self._running:
+                raise RuntimeError("submitting upload to closed client")
+            backend = self._backend
+            worker  = self._worker
+
+        if worker is None:
+            uploader.headers = backend.headers
+            uploader.timeout = timeout
+            return uploader.upload()
+
+        uploader.promise = async.Promise(None)
+        worker.schedule(None, lambda: uploader)
+
+        if self.async:
+            return uploader.promise
+
+        return uploader.promise.wait(timeout)
 
     def _pulse(self):
         now = time.time()
@@ -311,10 +346,10 @@ class BaseClient(events.Emitter):
             jobs.push(self.emit, 'disconnect')
 
         def on_signal(packet):
-            if packet.type == 2:
+            if packet.type == fmp.UPDATE:
                 jobs.push(self.emit, 'update', model.build(packet.path, packet.payload))
                 return
-            if packet.type == 3:
+            if packet.type == fmp.DELETE:
                 jobs.push(self.emit, 'delete', model.build(packet.path, packet.payload))
                 return
 
@@ -322,7 +357,7 @@ class BaseClient(events.Emitter):
             with self._lock:
                 req = self._pending.load(packet)
             if req is not None:
-                if packet.type == 0:
+                if packet.type == fmp.OK:
                     jobs.push(req.resolve, packet.payload)
                 else:
                     jobs.push(req.reject, errors.Error(packet.operation, packet.path, packet.payload.status, packet.payload.error))
@@ -353,11 +388,11 @@ class BaseClient(events.Emitter):
 
             # 2. Connection
             try:
-                backend = self._Backend(self._address, session)
+                backend = self._BackendClass(self._address, session)
                 backend.on('open', on_open)
                 backend.on('close', on_close)
                 backend.on('packet', on_packet)
-                backend.open(async=True)
+                backend.open(timeout=self._connect_timeout, async=True)
             except Exception as e:
                 delay = incr_delay(delay)
                 log.exception(e)
@@ -379,42 +414,43 @@ class BaseClient(events.Emitter):
 
             # 4. Process new jobs
             for job in jobs:
-                try:
-                    # Two different types of jobs are processed, sending packets and
-                    # emitting events.
-                    # When sending packets the jobs simply return the packets that needs
-                    # to be sent so the worker which has knowledge about the context
-                    # (backend, session, ...).
-                    # Event emitting jobs don't return anything so the worker move on
-                    # to processing the next job in that case.
-                    req = job()
+                todo = job()
 
-                    if req is None:
-                        continue
-                    packet = copy(req.packet)
+                if todo is None:
+                    continue
 
-                    if packet.seed == 0:
-                        req.packet.seed = session.info.seed
+                if isinstance(todo, fmp.Request):
+                    req = todo
+                    try:
+                        packet = copy(req.packet)
 
-                    elif packet.seed == session.info.seed:
-                        packet = copy(packet)
-                        packet.seed = 0
+                        if packet.seed == 0:
+                            req.packet.seed = session.info.seed
 
-                    log.debug("sending pending %s", packet)
-                    backend.send(packet)
-                except Exception as e:
-                    delay = incr_delay(delay)
-                    log.exception(e)
+                        elif packet.seed == session.info.seed:
+                            packet = copy(packet)
+                            packet.seed = 0
 
-                    # Something went wrong while submitting the request, we must reject
-                    # the associated request.
-                    with self._lock:
-                        req = self._pending.load(packet)
-                    if req is not None:
-                        req.reject(e)
+                        log.debug("sending pending %s", packet)
+                        backend.send(packet, timeout=self._request_timeout)
+                    except Exception as e:
+                        delay = incr_delay(delay)
+                        log.exception(e)
 
-                    self.emit('error', e)
-                    break
+                        # Something went wrong while submitting the request, we must reject
+                        # the associated request.
+                        with self._lock:
+                            req = self._pending.load(packet)
+                        if req is not None:
+                            req.reject(e)
+
+                        self.emit('error', e)
+                        break
+
+                elif isinstance(todo, Uploader):
+                    uploader = todo
+                    uploader.headers = backend.headers
+                    async.workers.schedule(None, uploader.upload)
 
                 if not backend.opened:
                     backend = None
@@ -467,8 +503,84 @@ class EventIterator(events.Iterator):
         for _ in events.Iterator.__iter__(self):
             pass
 
-def format_path(path):
-    for i, x in enumerate(path):
-        if not isinstance(x, six.text_type):
-            path[i] = six.text_type(x)
-    return path
+class Uploader(object):
+
+    def __init__(self, url=None, params=None, content=None, content_length=None, content_type=None, content_encoding=None, emitter=None, headers=None, timeout=None, promise=None):
+        self.url              = urlparse(url)
+        self.params           = params
+        self.content          = content
+        self.content_length   = content_length
+        self.content_type     = content_type
+        self.content_encoding = content_encoding
+        self.emitter          = emitter
+        self.headers          = headers
+        self.timeout          = timeout
+        self.promise          = promise
+
+    def upload(self):
+        headers = copy(self.headers)
+
+        if self.content_length is not None:
+            headers['Content-Length'] = self.content_length
+
+        if self.content_type is not None:
+            headers['Content-Type'] = self.content_type
+
+        if self.content_encoding is not None:
+            headers['Content-Encoding'] = self.content_encoding
+
+        try:
+            response = requests.put(
+                url     = urlunparse(self.url),
+                params  = self.params,
+                headers = headers,
+                data    = FileProgressUpload(self.content, self.content_length, self.emitter),
+                timeout = self.timeout
+            )
+        except Exception as e:
+            self.promise.reject(errors.Error('upload', self.url.path, 500, str(e)))
+            return
+
+        status = response.status_code
+        result = http.decode_response_payload(response.text)
+
+        if status != 200:
+            self.promise.reject(errors.Error('upload', self.url.path, status, result))
+            return
+
+        self.promise.resolve(result)
+
+class FileProgressUpload(object):
+
+    def __init__(self, content_object, content_length=None, emitter=None):
+        if isinstance(content_object, bytes):
+            content_object = six.BytesIO(content_object)
+
+        elif isinstance(content_object, str):
+            content_object = six.StringIO(content_object)
+
+        assert hasattr(content_object, 'read'), \
+            "file uploads require a file-like object with a read method but %s was found" % type(content_object)
+
+        self.fileobj = content_object
+        self.length  = content_length
+        self.upload  = 0
+        self.emitter = emitter
+
+    def read(self, size):
+        data = self.fileobj.read(size)
+
+        if self.emitter is not None:
+            if len(data) == 0:
+                if self.upload == 0:
+                    self.emitter.emit('progress', 0, self.length)
+                self.emitter.emit('end', self.upload)
+            else:
+                self.upload += len(data)
+                self.emitter.emit('progress', self.upload, self.length)
+
+        return data
+
+    def close(self):
+        if hasattr(self.fileobj, 'close'):
+            self.fileobj.close()

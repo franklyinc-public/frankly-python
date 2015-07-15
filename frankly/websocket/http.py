@@ -123,12 +123,17 @@ class HttpConnection(HttpSocket):
         self.host    = host
         self.reader  = None if socket is None else SocketReader(self.socket)
 
-    def connect(self, host, port='http', timeout=None):
+    def connect(self, host, port='http', timeout=None, secure=None):
         assert self.socket is None, "http connection already established"
-        self.socket = net.connect(host, port, timeout)
+
+        if secure is None and port == 'https':
+            secure = True
+
+        self.socket = net.connect(host, port, timeout=timeout, secure=secure)
         self.reader = SocketReader(self.socket)
         self.host   = host
-        if port != 'http':
+
+        if port not in ('http', 'https'):
             self.host += ':%s' % port
 
     def close(self):
@@ -188,7 +193,7 @@ class HttpConnection(HttpSocket):
         header += method
         header += ' '
         header += urlunparse(('', '', path, '', query, fragment if bool(fragment) else ''))
-        header += ' %s\r\n' % version    
+        header += ' %s\r\n' % version
         header += ''.join('%s: %s\r\n' % (k, v) for k, v in six.iteritems(fields))
         header += '\r\n'
         header  = header.encode('utf-8')
@@ -304,7 +309,7 @@ class HttpClient(HttpSocket):
 
         if isinstance(status, int):
             status = '%s %s' % (status, reasons[status])
-        
+
         header  = ''
         header += '%s %s\r\n' % (version, status)
         header += ''.join('%s: %s\r\n' % (k, v) for k, v in six.iteritems(fields))

@@ -75,6 +75,7 @@ class Backend(events.Emitter):
         self.address     = address
         self.headers     = headers
         self.socket      = None
+        self.send_worker = None
         self.recv_worker = None
         self.ping_worker = None
 
@@ -82,18 +83,26 @@ class Backend(events.Emitter):
     def opened(self):
         return self.socket is not None
 
-    def open(self, **kwargs):
+    def open(self, timeout=None, **kwargs):
         host = self.url.hostname
         port = self.url.port
 
         if port is None:
-            port = url.scheme
+            port = self.url.scheme
 
-        self.socket = ws.connect(host, port=port, fields=self.headers, protocols=['chat'])
+        if port == 'ws':
+            port = 'http'
 
+        if port == 'wss':
+            port = 'https'
+
+        self.socket = ws.connect(host, port=port, fields=self.headers, protocols=['chat'], timeout=timeout)
+
+        self.send_worker = async.Worker()
         self.recv_worker = async.Worker()
         self.ping_worker = async.Timer(20, self._pulse)
 
+        self.send_worker.start()
         self.recv_worker.start()
         self.ping_worker.start()
 
@@ -108,17 +117,19 @@ class Backend(events.Emitter):
 
         self.socket.shutdown(code, reason)
 
+        self.send_worker.stop()
         self.recv_worker.stop()
         self.ping_worker.stop()
 
+        self.send_worker.join()
         self.recv_worker.join()
         self.ping_worker.join()
 
         self.socket.close()
         self.socket = None
 
-    def send(self, packet):
-        self.socket.send(fmp.encode(packet))
+    def send(self, packet, timeout=None):
+        self.send_worker.schedule(None, self.socket.send, fmp.encode(packet))
 
     def _pulse(self):
         try:

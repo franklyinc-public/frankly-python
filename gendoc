@@ -1,3 +1,0 @@
-#!/bin/bash
-PYTHONPATH=.:$PYTHONPATH
-exec pdoc frankly --html --overwrite --template-dir ./doc/ --html-dir $*

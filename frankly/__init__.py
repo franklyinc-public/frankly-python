@@ -26,6 +26,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import mimetypes
+import os
 import six
 from six.moves import urllib
 urlparse = urllib.parse.urlparse
@@ -43,6 +45,7 @@ from . import ws
 from . import core
 
 from .errors import Error
+from .events import Emitter as EventEmitter
 from .core import BaseClient
 from .core import EventIterator
 from .util import Object
@@ -55,6 +58,7 @@ __all__ = [
     'Client',
     'BaseClient',
     'EventIterator',
+    'EventEmitter',
     'Error',
     'Object',
     'Session'
@@ -254,7 +258,7 @@ class Client(BaseClient):
 
         The method returns an object representing the newly created object.
         """
-        return self._request(1, path, params, payload)
+        return self._request(fmp.CREATE, path, params, payload)
 
     def create_announcement(self, **payload):
         """
@@ -278,7 +282,7 @@ class Client(BaseClient):
 
         The method returns an object representing the newly created announcement.
         """
-        return self.create(['announcements'], payload=payload)
+        return self.create(('announcements',), payload=payload)
 
     def create_file(self, **payload):
         """
@@ -300,7 +304,7 @@ class Client(BaseClient):
 
         The method returns an object representing the newly created file.
         """
-        return self.create(['files'], payload=payload)
+        return self.create(('files',), payload=payload)
 
     def create_room(self, **payload):
         """
@@ -334,7 +338,7 @@ class Client(BaseClient):
 
         The method returns an object representing the newly created room.
         """
-        return self.create(['rooms'], payload=payload)
+        return self.create(('rooms',), payload=payload)
 
     def create_room_message(self, room_id, **payload):
         """
@@ -362,31 +366,31 @@ class Client(BaseClient):
                 params[key] = payload[key]
                 del payload[key]
 
-        return self.create(['rooms', room_id, 'messages'], params=params, payload=payload)
+        return self.create(('rooms', room_id, 'messages'), params=params, payload=payload)
 
     def create_room_message_flag(self, room_id, message_id):
-        return self.create(['rooms', room_id, 'messages', message_id, 'flag'])
+        return self.create(('rooms', room_id, 'messages', message_id, 'flag'))
 
     def create_room_owner(self, room_id, user_id):
-        return self.create(['rooms', room_id, 'owners', user_id])
+        return self.create(('rooms', room_id, 'owners', user_id))
 
     def create_room_moderator(self, room_id, user_id):
-        return self.create(['rooms', room_id, 'moderators', user_id])
+        return self.create(('rooms', room_id, 'moderators', user_id))
 
     def create_room_member(self, room_id, user_id):
-        return self.create(['rooms', room_id, 'members', user_id])
+        return self.create(('rooms', room_id, 'members', user_id))
 
     def create_room_announcer(self, room_id, user_id):
-        return self.create(['rooms', room_id, 'announcers', user_id])
+        return self.create(('rooms', room_id, 'announcers', user_id))
 
     def create_room_subscriber(self, room_id, user_id):
-        return self.create(['rooms', room_id, 'subscribers', user_id])
+        return self.create(('rooms', room_id, 'subscribers', user_id))
 
     def create_room_participant(self, room_id, user_id):
-        return self.create(['rooms', room_id, 'participants', user_id])
+        return self.create(('rooms', room_id, 'participants', user_id))
 
     def create_user(self, **payload):
-        return self.create(['users'], payload=payload)
+        return self.create(('users',), payload=payload)
 
     def delete(self, path, params=None, payload=None):
         """
@@ -405,7 +409,7 @@ class Client(BaseClient):
         - `payload (dict)`  
         Dict-like object representing the object to create.
         """
-        return self._request(3, path, params, payload)
+        return self._request(fmp.DELETE, path, params, payload)
 
     def delete_announcement(self, announcement_id):
         """
@@ -421,7 +425,7 @@ class Client(BaseClient):
         - `announcement_id (int)`  
         The identifier of the announcement to delete.
         """
-        return self.delete(['announcements', announcement_id])
+        return self.delete(('announcements', announcement_id))
 
     def delete_room(self, room_id):
         """
@@ -439,31 +443,31 @@ class Client(BaseClient):
         The identifier of the room to delete.
 
         """
-        return self.delete(['rooms', room_id])
+        return self.delete(('rooms', room_id))
 
     def delete_room_owner(self, room_id, user_id):
-        return self.delete(['rooms', room_id, 'owners', user_id])
+        return self.delete(('rooms', room_id, 'owners', user_id))
 
     def delete_room_moderator(self, room_id, user_id):
-        return self.delete(['rooms', room_id, 'moderators', user_id])
+        return self.delete(('rooms', room_id, 'moderators', user_id))
 
     def delete_room_member(self, room_id, user_id):
-        return self.delete(['rooms', room_id, 'members', user_id])
+        return self.delete(('rooms', room_id, 'members', user_id))
 
     def delete_room_announcer(self, room_id, user_id):
-        return self.delete(['rooms', room_id, 'announcers', user_id])
+        return self.delete(('rooms', room_id, 'announcers', user_id))
 
     def delete_room_subscriber(self, room_id, user_id):
-        return self.delete(['rooms', room_id, 'subscribers', user_id])
+        return self.delete(('rooms', room_id, 'subscribers', user_id))
 
     def delete_room_participant(self, room_id, user_id):
-        return self.delete(['rooms', room_id, 'participants', user_id])
+        return self.delete(('rooms', room_id, 'participants', user_id))
 
     def delete_session(self):
-        return self.delete(['session'])
+        return self.delete(('session',))
 
     def delete_user(self, user_id):
-        return self.delete(['users', user_id])
+        return self.delete(('users', user_id))
 
     def read(self, path, params=None, payload=None):
         """
@@ -486,7 +490,7 @@ class Client(BaseClient):
 
         The method returns the object read from the API at the specified path.
         """
-        return self._request(0, path, params, payload)
+        return self._request(fmp.READ, path, params, payload)
 
     def read_announcement(self, announcement_id):
         """
@@ -502,7 +506,7 @@ class Client(BaseClient):
         The method returns an object representing the announcement with the
         specified id.
         """
-        return self.read(['announcements', announcement_id])
+        return self.read(('announcements', announcement_id))
 
     def read_announcement_list(self):
         """
@@ -513,7 +517,7 @@ class Client(BaseClient):
         The method returns a list of annoucement objects ordered by id, which
         may be empty if there are no announcements in the app.
         """
-        return self.read(['announcements'])
+        return self.read(('announcements',))
 
     def read_announcement_room_list(self, announcement_id):
         """
@@ -530,7 +534,7 @@ class Client(BaseClient):
         may be empty if there are no announcements in the app or if none have been
         published yet.
         """
-        return self.read(['announcements', announcement_id, 'rooms'])
+        return self.read(('announcements', announcement_id, 'rooms'))
 
     def read_room(self, room_id):
         """
@@ -545,7 +549,7 @@ class Client(BaseClient):
 
         The method returns an object representing the room with the specified id.
         """
-        return self.read(['rooms', room_id])
+        return self.read(('rooms', room_id))
 
     def read_room_list(self):
         """
@@ -556,10 +560,10 @@ class Client(BaseClient):
         The method returns a list of room objects ordered by id, which may be
         empty if there are no rooms in the app.
         """
-        return self.read(['rooms'])
+        return self.read(('rooms',))
 
     def read_room_message(self, room_id, message_id):
-        return self.read(['rooms', room_id, 'messages', message_id])
+        return self.read(('rooms', room_id, 'messages', message_id))
 
     def read_room_message_list(self, room_id, **params):
         """
@@ -595,40 +599,40 @@ class Client(BaseClient):
         The method returns a list of message objects, which may be empty if no
         messages were satisfying the query.
         """
-        return self.read(['rooms', room_id, 'messages'], params=params)
+        return self.read(('rooms', room_id, 'messages'), params=params)
 
     def read_room_owner_list(self, room_id):
-        return self.read(['rooms', room_id, 'owners'])
+        return self.read(('rooms', room_id, 'owners'))
 
     def read_room_moderator_list(self, room_id):
-        return self.read(['rooms', room_id, 'moderators'])
+        return self.read(('rooms', room_id, 'moderators'))
 
     def read_room_member_list(self, room_id):
-        return self.read(['rooms', room_id, 'members'])
+        return self.read(('rooms', room_id, 'members'))
 
     def read_room_announcer_list(self, room_id):
-        return self.read(['rooms', room_id, 'announcers'])
+        return self.read(('rooms', room_id, 'announcers'))
 
     def read_room_subscriber_list(self, room_id):
-        return self.read(['rooms', room_id, 'subscribers'])
+        return self.read(('rooms', room_id, 'subscribers'))
 
     def read_room_participant_list(self, room_id):
-        return self.read(['rooms', room_id, 'participants'])
+        return self.read(('rooms', room_id, 'participants'))
 
     def read_room_count(self, room_id):
-        return self.read(['rooms', room_id, 'count'])
+        return self.read(('rooms', room_id, 'count'))
 
     def read_session(self):
-        return self.read(['session'])
+        return self.read(('session',))
 
     def read_user(self, user_id):
-        return self.read(['users', user_id])
+        return self.read(('users', user_id))
 
     def read_user_ban(self, user_id):
-        return self.read(['users', user_id, 'ban'])
+        return self.read(('users', user_id, 'ban'))
 
     def read_app(self, app_id):
-        return self.read(['apps', app_id])
+        return self.read(('apps', app_id))
 
     def update(self, path, params=None, payload=None):
         """
@@ -651,7 +655,7 @@ class Client(BaseClient):
 
         The method returns the object updated on the API at the specified path.
         """
-        return self._request(2, path, params, payload)
+        return self._request(fmp.UPDATE, path, params, payload)
 
     def update_room(self, room_id, **payload):
         """
@@ -688,12 +692,12 @@ class Client(BaseClient):
 
         The method returns an object representing the newly updated room.
         """
-        return self.update(['rooms', room_id], payload=payload)
+        return self.update(('rooms', room_id), payload=payload)
 
     def update_user(self, user_id, **payload):
-        return self.update(['users', user_id], payload=payload)
+        return self.update(('users', user_id), payload=payload)
 
-    def update_file(self, url, file_obj, file_size, mime_type, encoding=None):
+    def update_file(self, url, file_obj, file_size, mime_type=None, encoding=None, timeout=None, emitter=None):
         """
         Updates the content of a file object hosted on Frankly servers.
 
@@ -702,7 +706,7 @@ class Client(BaseClient):
         - `url (str)`  
         The URL at which the file is hosted on Frankly servers. This can be
         obtained from the `url` field of an object returned by
-        `frankly.Client.create_file` for example.
+        `frankly.FranklyClient.create_file` for example.
 
         - `file_obj (object)`  
         A file-like object (as returned by `open` for example) providing the new
@@ -716,18 +720,29 @@ class Client(BaseClient):
 
         - `encoding (str)`  
         The encoding of the new file content (`'gzip'` for example).
+
+        - `timeout` (int or float)  
+        How long uploading the file can take at most, this parameter is optional
+        and a default timeout based on bitrate limitation will be computed if
+        none is given.
+
+        - `emitter` (frankly.EventEmitter)  
+        An instance of `frankly.EventEmitter` where the 'progress', 'cancel' or
+        'end' events are triggered when changes are made during the file upload.
         """
         self.upload(
             url,
-            payload          = file_obj,
+            content          = file_obj,
             content_length   = file_size,
             content_type     = mime_type,
-            content_encoding = encoding
+            content_encoding = encoding,
+            timeout          = timeout,
+            emitter          = emitter,
         )
 
-    def update_file_from_path(self, url, file_path):
+    def update_file_from_path(self, url, file_path, mime_type=None, encoding=None, timeout=None, emitter=None):
         """
-        This method is a convenience wrapper for calling `frankly.Client.update_file`
+        This method is a convenience wrapper for calling `frankly.FranklyClient.update_file`
         with content provided by a local file.
 
         **Arguments**
@@ -735,18 +750,63 @@ class Client(BaseClient):
         - `url (str)`  
         The URL at which the file is hosted on Frankly servers. This can be
         obtained from the `url` field of an object returned by
-        `frankly.Client.create_file` for example.
+        `frankly.FranklyClient.create_file` for example.
 
         - `file_path (str)`  
         A path to a local file providing the new file content.
+
+        - `mime_type (str)`  
+        The mime type of the new file content.
+
+        - `encoding (str)`  
+        The encoding of the new file content (`'gzip'` for example).
+
+        - `timeout` (int or float)  
+        How long uploading the file can take at most, this parameter is optional
+        and a default timeout based on bitrate limitation will be computed if
+        none is given.
+
+        - `emitter` (frankly.EventEmitter)  
+        An instance of `frankly.EventEmitter` where the 'progress', 'cancel' or
+        'end' events are triggered when changes are made during the file upload.
         """
         file_size = os.path.getsize(file_path)
-        mime_type, encoding = mimetypes.guess_type(file_path)
+        guess_type, guess_encoding = mimetypes.guess_type(file_path)
 
-        with open(file_path, 'rb') as file_obj:
-            self.update_file(url, file_obj, file_size, mime_type, encoding)
+        if mime_type is None:
+            mime_type = guess_type
 
-    def upload(self, url, params=None, payload=None, content_length=None, content_type=None, content_encoding=None):
+        if encoding is None:
+            encoding = guess_encoding
+
+        file_obj = open(file_path, 'rb')
+        file_res = self.update_file(
+            url,
+            file_obj  = file_obj,
+            file_size = file_size,
+            mime_type = mime_type,
+            encoding  = encoding,
+            timeout   = timeout,
+            emitter   = emitter,
+        )
+
+        if self.async:
+            promise = async.Promise(None)
+
+            def success(file_info):
+                file_obj.close()
+                promise.resolve(file_info)
+
+            def failure(error):
+                file_obj.close()
+                promise.reject(error)
+
+            file_res.then(success, failure)
+            return promise
+
+        return file_res
+
+    def upload(self, url, params=None, content=None, content_length=None, content_type=None, content_encoding=None, timeout=None, emitter=None):
         """
         This method exposes a generic interface for uploading file contents to
         the Frankly API.  
@@ -762,7 +822,7 @@ class Client(BaseClient):
         - `params (dict)`  
         Parameters passed as part of the request.
 
-        - `payload (dict)`  
+        - `content (dict)`  
         A file-like object or a memory buffer providing the new content of the
         file.
 
@@ -775,6 +835,15 @@ class Client(BaseClient):
         - `content_encoding (str)`  
         The encoding of the new file content (`'gzip'` for example).
 
+        - `timeout` (int or float)  
+        How long uploading the file can take at most, this parameter is optional
+        and a default timeout based on bitrate limitation will be computed if
+        none is given.
+
+        - `emitter` (frankly.EventEmitter)  
+        An instance of `frankly.EventEmitter` where the 'progress', 'cancel' or
+        'end' events are triggered when changes are made during the file upload.
+
         **Return**
 
         The method returns the object uploaded by the API at the specified path.
@@ -782,13 +851,15 @@ class Client(BaseClient):
         return self._upload(
             url,
             params           = params,
-            payload          = payload,
+            content          = content,
             content_length   = content_length,
             content_type     = content_type,
             content_encoding = content_encoding,
+            timeout          = timeout,
+            emitter          = emitter,
         )
 
-    def upload_file(self, file_obj, file_size, mime_type, encoding=None, **params):
+    def upload_file(self, file_obj, file_size, mime_type, category=None, type=None, encoding=None, timeout=None, emitter=None):
         """
         This method is convenience wrapper for creating a new file object on the
         Frankly API and setting its content.
@@ -807,12 +878,6 @@ class Client(BaseClient):
         - `file_size (int)`  
         The size of the new file content (in bytes).
 
-        - `mime_type (str)`  
-        The mime type of the new file content.
-
-        - `encoding (str)`  
-        The encoding of the new file content (`'gzip'` for example).
-
         - `category (str)`  
         One of the file categories supported by the API (see the *File* section
         of the documentation).
@@ -821,17 +886,47 @@ class Client(BaseClient):
         One of the file types supported by the API (see the *File* section of
         the documentation).
 
+        - `mime_type (str)`  
+        The mime type of the new file content.
+
+        - `encoding (str)`  
+        The encoding of the new file content (`'gzip'` for example).
+
+        - `timeout` (int or float)  
+        How long uploading the file can take at most, this parameter is optional
+        and a default timeout based on bitrate limitation will be computed if
+        none is given.
+
+        - `emitter` (frankly.EventEmitter)  
+        An instance of `frankly.EventEmitter` where the 'progress', 'cancel' or
+        'end' events are triggered when changes are made during the file upload.
+
         **Return**
 
         The method returns an object representing the newly uploaded file.
         """
-        if params.get('category') is None:
-            params['category'] = 'chat'
-        f = self.create_file(**params)
-        self.update_file(f.url, file_obj, file_size, mime_type, encoding)
-        return f
+        if category is None:
+            category = 'chat'
 
-    def upload_file_from_path(self, file_path, **params):
+        file_ = self.create_file(category=category, type=type)
+        maybe = self.update_file(
+            file_.url,
+            file_obj  = file_obj,
+            file_size = file_size,
+            mime_type = mime_type,
+            encoding  = encoding,
+            timeout   = timeout,
+            emitter   = emitter,
+        )
+
+        if self.async:
+            promise = async.Promise(None)
+            maybe.then(lambda whatever: promise.resolve(file_), promise.reject)
+            return promise
+
+        return file_
+
+    def upload_file_from_path(self, file_path, category=None, type=None, mime_type=None, encoding=None, timeout=None, emitter=None):
         """
         This method is convenience wrapper for creating a new file object on the
         Frankly API and uploading the content from a local file.
@@ -849,15 +944,62 @@ class Client(BaseClient):
         One of the file types supported by the API (see the *File* section of
         the documentation).
 
+        - `mime_type (str)`  
+        The mime type of the new file content.
+
+        - `encoding (str)`  
+        The encoding of the new file content (`'gzip'` for example).
+
+        - `timeout` (int or float)  
+        How long uploading the file can take at most, this parameter is optional
+        and a default timeout based on bitrate limitation will be computed if
+        none is given.
+
+        - `emitter` (frankly.EventEmitter)  
+        An instance of `frankly.EventEmitter` where the 'progress', 'cancel' or
+        'end' events are triggered when changes are made during the file upload.
+
         **Return**
 
         The method returns an object representing the newly uploaded file.
         """
         file_size = os.path.getsize(file_path)
-        mime_type, encoding = mimetypes.guess_type(file_path)
+        guess_type, guess_encoding = mimetypes.guess_type(file_path)
 
-        if params.get('type') is None:
-            params['type'] = mime_type.split('/')[0]
+        if mime_type is None:
+            mime_type = guess_type
 
-        with open(file_path, 'rb') as file_obj:
-            return self.upload_file(file_obj, file_size, mime_type, encoding, **params)
+        if encoding is None:
+            encoding = guess_encoding
+
+        if type is None:
+            type = mime_type.split('/')[0]
+
+        file_obj = open(file_path, 'rb')
+
+        result = self.upload_file(
+            category  = category,
+            type      = type,
+            file_obj  = file_obj,
+            file_size = file_size,
+            mime_type = mime_type,
+            encoding  = encoding,
+            timeout   = timeout,
+            emitter   = emitter,
+        )
+
+        if self.async:
+            promise = async.Promise(None)
+
+            def success(file_info):
+                file_obj.close()
+                promise.resolve(file_info)
+
+            def failure(error):
+                file_obj.close()
+                promise.reject(error)
+
+            result.then(success, failure)
+            return promise
+
+        return result

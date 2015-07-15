@@ -52,7 +52,7 @@ def make_client(role='admin'):
 
 class TestWebSocketClient(unittest.TestCase):
 
-    def test_01_read_session(self):
+    def test_01_session(self):
         with make_client() as client:
             session = client.read_session()
             self.assertEqual(session.platform, 'python')
@@ -66,13 +66,13 @@ class TestWebSocketClient(unittest.TestCase):
             self.assertNotEqual(session.updated_on, None)
             self.assertNotEqual(session.expires_on, None)
 
-    def test_02_read_app(self):
+    def test_02_app(self):
         with make_client() as client:
             session = client.read_session()
             app = client.read_app(session.app.id)
             self.assertEqual(session.app, app)
 
-    def test_03_read_self(self):
+    def test_03_self(self):
         with make_client() as client:
             session = client.read_session()
             user = client.read_user(session.user.id)
@@ -144,3 +144,25 @@ class TestWebSocketClient(unittest.TestCase):
                 if r2d2 is not None: client.delete_user(r2d2.id)
                 if c3po is not None: client.delete_user(c3po.id)
                 client.delete_room(hoth.id)
+
+    def test_06_upload(self):
+        with make_client() as client:
+            events = {
+                'progress' : False,
+                'end'      : False,
+            }
+
+            def on_progress(sent, total):
+                events['progress'] = True
+
+            def on_end(total):
+                events['end'] = True
+
+            emitter = frankly.EventEmitter()
+            emitter.on('progress', on_progress)
+            emitter.on('end', on_end)
+
+            file_info = client.upload_file_from_path('images/094b468.png', timeout=5, emitter=emitter)
+            self.assertNotEqual(file_info.url, None)
+            self.assertTrue(events['progress'])
+            self.assertTrue(events['end'])

@@ -201,6 +201,14 @@ class WebSocket(object):
 
     if six.PY3:
         def send_bytes(self, iovec):
+            # SSL sockets don't support sendmsg, for that case we merge the iovec
+            # in a single buffer.
+            if self.socket.secure:
+                data = bytearray()
+                for chunk in iovec:
+                    data.extend(chunk)
+                return self.socket.sendall(data)
+
             full = sum(len(x) for x in iovec)
             size = 0
 
