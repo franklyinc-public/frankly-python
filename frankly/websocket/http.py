@@ -123,13 +123,13 @@ class HttpConnection(HttpSocket):
         self.host    = host
         self.reader  = None if socket is None else SocketReader(self.socket)
 
-    def connect(self, host, port='http', timeout=None, secure=None):
+    def connect(self, host, port='http', timeout=None, secure=None, **kwargs):
         assert self.socket is None, "http connection already established"
 
         if secure is None and port == 'https':
             secure = True
 
-        self.socket = net.connect(host, port, timeout=timeout, secure=secure)
+        self.socket = net.connect(host, port, timeout=timeout, secure=secure, **kwargs)
         self.reader = SocketReader(self.socket)
         self.host   = host
 

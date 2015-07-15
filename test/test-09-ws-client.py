@@ -162,7 +162,7 @@ class TestWebSocketClient(unittest.TestCase):
             emitter.on('progress', on_progress)
             emitter.on('end', on_end)
 
-            file_info = client.upload_file_from_path('images/094b468.png', timeout=5, emitter=emitter)
+            file_info = client.upload_file_from_path('test/images/094b468.png', timeout=5, emitter=emitter)
             self.assertNotEqual(file_info.url, None)
             self.assertTrue(events['progress'])
             self.assertTrue(events['end'])

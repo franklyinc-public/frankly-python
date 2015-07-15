@@ -337,7 +337,7 @@ class BaseClient(events.Emitter):
         delay   = 0
 
         def incr_delay(delay):
-            return max(15, min(1, 2 * delay))
+            return min(15, max(1, 2 * delay))
 
         def on_open():
             jobs.push(self.emit, 'connect')
@@ -371,9 +371,10 @@ class BaseClient(events.Emitter):
         while self._version_match(version):
             # On the first pass delay is zero so this call returns immediately.
             # The delay gets increased if authenticating or connecting fails.
-            time.sleep(delay)
-            if not self._version_match(version):
-                return
+            for _ in range(delay):
+                if not self._version_match(version):
+                    return
+                time.sleep(1)
 
             # 1. Authentication
             try:
@@ -383,7 +384,6 @@ class BaseClient(events.Emitter):
                 log.exception(e)
                 self.emit('error', e)
                 continue
-            delay = 0
             log.debug("authenticated with %s", session)
 
             # 2. Connection

@@ -84,8 +84,9 @@ class Backend(events.Emitter):
         return self.socket is not None
 
     def open(self, timeout=None, **kwargs):
-        host = self.url.hostname
-        port = self.url.port
+        host   = self.url.hostname
+        port   = self.url.port
+        secure = kwargs.get('secure', False)
 
         if port is None:
             port = self.url.scheme
@@ -94,9 +95,12 @@ class Backend(events.Emitter):
             port = 'http'
 
         if port == 'wss':
-            port = 'https'
+            port   = 'https'
 
-        self.socket = ws.connect(host, port=port, fields=self.headers, protocols=['chat'], timeout=timeout)
+        if port == 'https':
+            secure = True
+
+        self.socket = ws.connect(host, port=port, fields=self.headers, protocols=['chat'], timeout=timeout, secure=secure)
 
         self.send_worker = async.Worker()
         self.recv_worker = async.Worker()
@@ -166,4 +170,4 @@ class Backend(events.Emitter):
                     continue
         except Exception as e:
             log.exception(e)
-            self.emit('close')
+            self.emit('close', 1006, str(e))

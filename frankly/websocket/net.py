@@ -60,7 +60,7 @@ __all__ = [
 ]
 
 def getaddrinfo(host, port, socktype=0, protocol=0, flags=0):
-    return pysocket.getaddrinfo(host, port, 0, socktype, protocol, flags)
+    return pysocket.getaddrinfo(host, str(port), 0, socktype, protocol, flags)
 
 def getprototype(protocol):
     if protocol == 'tcp':
@@ -79,6 +79,10 @@ class socket(object):
             self._socket = socket if socket is not None else pysocket.socket(family, socktype, protocol, fileno)
             self.timeout = timeout
             if secure:
+                try:
+                    del kwargs['ssl_hostname']
+                except KeyError:
+                    pass
                 self._socket = ssl.wrap_socket(self._socket, **kwargs)
 
     else:

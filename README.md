@@ -11,6 +11,11 @@ The frankly module can be installed like most python modules using pip:
 $ pip install git+https://github.com/franklyinc/frankly-python.git#egg=frankly
 ```
 
+**Compatiblity**
+
+The frankly-python module requires Pytohn 2.7.9+ or Python 3.4.0+ to be used
+successfully.
+
 Testing
 -------
 
