@@ -1,11 +1,11 @@
 #Frankly Python SDK
 
-The Python module makes it easy to create deeper Frankly chat integrations in your app by interacting with Frankly's server APIs for managing Rooms, Messages, and Users.
+The Python module makes it easy to create deeper Frankly Chat Platform integrations in your app by interacting with Frankly's server APIs for managing Rooms, Messages, and Users.
 
 Installation
 ------------
 
-The frankly module can be installed like most python modules using pip:
+The Frankly module can be installed like most Python modules using pip:
 
 ```
 $ pip install frankly-python
@@ -38,14 +38,14 @@ $ python3 -m nose
 Documentation
 -------------
 
-Please fine the complete Python integration guide and API reference, generated from [pdoc](https://github.com/BurntSushi/pdoc), at
-[http://franklyinc.github.io/frankly-python](http://franklyinc.github.io/frankly-python/).
+Please find the complete Python integration guide, generated from [pdoc](https://github.com/BurntSushi/pdoc), at
+[http://franklyinc.github.io/AdvancedIntegrations.html#In-depth_Usage](http://franklyinc.github.io/AdvancedIntegrations.html#In-depth_Usage), and API reference at [http://franklyinc.github.io/APIReference-Python.html](http://franklyinc.github.io/APIReference-Python.html).
 
 
 Making Improvements
 -------------------
 
-Frankly Platform provides a great way for brands to integrate chat in their iOS, Android, and Web apps in order to build and engage their communities. But of course, that's not possible without developers like you. Have ideas for improving the integration experience? Let us know by [creating a Github issue in this repo](https://github.com/franklyinc/frankly-python/issues/new)!
+Frankly Chat Platform provides a great way for brands to integrate chat in their iOS, Android, and Web apps in order to build and engage their communities. But of course, that's not possible without developers like you. Have ideas for improving the integration experience? Let us know by [creating a Github issue in this repo](https://github.com/franklyinc/frankly-python/issues/new)!
 
 
 Access & Support
