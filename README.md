@@ -13,7 +13,7 @@ $ pip install frankly-python
 
 **Compatiblity**
 
-The frankly-python module requires Pytohn 2.7.9+ or Python 3.4.0+ to be used
+The frankly-python module requires Python 2.7.9+ or Python 3.4.0+ to be used
 successfully.
 
 Testing
