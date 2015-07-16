@@ -51,6 +51,6 @@ Frankly Chat Platform provides a great way for brands to integrate chat in their
 Access & Support
 ----------------
 
-Right now Frankly Platform is limited in access. If you'd like to learn more about how to get access, please reach out to us by emailing [platform-support@franklychat.com](mailto:platform-support@franklychat.com).
+Right now Frankly Chat Platform is limited in access. If you'd like to learn more about how to get access, please reach out to us by emailing [platform-support@franklychat.com](mailto:platform-support@franklychat.com).
 
 
