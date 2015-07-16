@@ -112,11 +112,10 @@ class TestHttpClient(unittest.TestCase):
             room = None
 
             try:
-                tasks = [{ 'display_name': 'C3PO', 'partner_user_id': 'c3po-%s' % i } for i in range(12)]
-
-                for usr, err in parallel_do(lambda kv: client.create_user(**kv), tasks):
-                    if err is not None:
-                        raise err
+                for i in range(12):
+                    uid = 'c3po-%s' % i
+                    usr = client.create_user(display_name='C3PO', partner_user_id=uid, role='regular')
+                    usr.partner_user_id = uid
                     users.append(usr)
 
                 room = client.create_room(
@@ -130,7 +129,7 @@ class TestHttpClient(unittest.TestCase):
                         clients.append(frankly.Client(APP_HOST))
 
                     for c, u in zip(clients, users):
-                        c.open(APP_KEY, APP_SECRET, user=u.id)
+                        c.open(frankly.identity_token_generator(APP_KEY, APP_SECRET, uid=u.partner_user_id))
 
                     message = clients[0].create_room_message(
                         room.id,

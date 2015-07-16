@@ -360,7 +360,11 @@ class BaseClient(events.Emitter):
                 if packet.type == fmp.OK:
                     jobs.push(req.resolve, packet.payload)
                 else:
-                    jobs.push(req.reject, errors.Error(packet.operation, packet.path, packet.payload.status, packet.payload.error))
+                    status = packet.payload.status
+                    reason = packet.payload.error
+                    jobs.push(req.reject, errors.Error(packet.operation, packet.path, status, reason))
+                    if status == 401:
+                        jobs.push(lambda: 'break')
 
         def on_packet(packet):
             if packet.id == 0:
@@ -451,6 +455,12 @@ class BaseClient(events.Emitter):
                     uploader = todo
                     uploader.headers = backend.headers
                     async.workers.schedule(None, uploader.upload)
+
+                elif isinstance(todo, six.text_type):
+                    if todo == 'break':
+                        # We got a 401, the current session expired, we'll go ahead and
+                        # re-authenticate.
+                        break
 
                 if not backend.opened:
                     backend = None

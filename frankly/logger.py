@@ -31,7 +31,7 @@ import logging
 __all__ = [
     'debug',
     'info',
-    'warn',
+    'warning',
     'error',
 ]
 
