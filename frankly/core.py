@@ -550,6 +550,7 @@ class Uploader(object):
         except Exception as e:
             self.promise.reject(errors.Error('upload', self.url.path, 500, str(e)))
             return
+        response.encoding = 'utf-8'
 
         status = response.status_code
         result = http.decode_response_payload(response.text)

@@ -135,23 +135,20 @@ class Backend(events.Emitter):
                 params  = packet.params,
                 data    = content,
                 timeout = timeout,
-                stream  = True,
             )
         except errors.Error:
             raise
         except Exception as e:
             raise errors.Error(packet.operation, packet.path, 500, str(e))
+        response.encoding = 'utf-8'
 
-        try:
-            status = response.status_code
-            result = decode_response_payload(response.text)
+        status = response.status_code
+        result = decode_response_payload(response.text)
 
-            if status < 200 or status >= 300:
-                raise errors.Error(packet.operation, packet.path, status, result)
+        if status < 200 or status >= 300:
+            raise errors.Error(packet.operation, packet.path, status, result)
 
-            return result
-        finally:
-            response.close()
+        return result
 
 def make_method(type):
     if type == 0: return 'GET'
