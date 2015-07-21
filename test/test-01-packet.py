@@ -71,3 +71,12 @@ class TestPacket(unittest.TestCase):
         packet = fmp.Packet(2, 1, 42, ['path', '1234'], util.Object(), None)
         string = fmp.encode(packet)
         self.assertEqual(packet, fmp.decode(string))
+
+    def test_encode_decode_09(self):
+        packet = fmp.Packet(2, 1, 42, ['path', '42'], util.Object(), util.Object(
+            contents = [
+                { 'type': 'text/plain', 'value': '\U0001f604' },
+            ]
+        ))
+        string = fmp.encode(packet)
+        self.assertEqual(packet, fmp.decode(string))
