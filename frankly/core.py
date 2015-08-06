@@ -548,6 +548,8 @@ class Uploader(object):
                 timeout = self.timeout
             )
         except Exception as e:
+            if self.promise is None:
+                raise
             self.promise.reject(errors.Error('upload', self.url.path, 500, str(e)))
             return
         response.encoding = 'utf-8'
@@ -559,6 +561,8 @@ class Uploader(object):
             self.promise.reject(errors.Error('upload', self.url.path, status, result))
             return
 
+        if self.promise is None:
+            return result
         self.promise.resolve(result)
 
 class FileProgressUpload(object):

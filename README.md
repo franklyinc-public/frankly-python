@@ -2,7 +2,8 @@
 
 The Python module makes it easy to create deeper Frankly chat integrations in your app by interacting with Frankly's server APIs for managing Rooms, Messages, and Users.
 
-##Installation
+Installation
+------------
 
 The frankly module can be installed like most python modules using pip:
 
@@ -15,7 +16,8 @@ $ pip install frankly-python
 The frankly-python module requires Pytohn 2.7.9+ or Python 3.4.0+ to be used
 successfully.
 
-##Testing
+Testing
+-------
 
 The test suite relies on environment variables to figure out where to connect to
 for tests that make API calls.  
@@ -33,19 +35,21 @@ $ python2 -m nose
 $ python3 -m nose
 ```
 
-##Documentation
-Here are the resources available:
-  1. Complete Frankly Chat Service integration guide - [franklyinc.github.io](http://franklyinc.github.io)
-  2. Frankly Python module API reference -  [franklyinc.github.io/APIReference-Python.html/](http://franklyinc.github.io/APIReference-Python.html)
-  3. Frankly Chat Service Authentication guide - [franklyinc.github.io/Auth.html](http://franklyinc.github.io/Auth.html)
+Documentation
+-------------
+
+Please fine the complete Python integration guide and API reference, generated from [pdoc](https://github.com/BurntSushi/pdoc), at
+[http://franklyinc.github.io/frankly-python](http://franklyinc.github.io/frankly-python/).
 
 
-##Making Improvements
+Making Improvements
+-------------------
 
-Frankly Platform provides a great way for brands to integrate chat in their iOS, Android, and Web apps in order to build and engage their communities. But of course, that's not possible without developers like you. Have ideas for improving the integration experience? Let us know by [creating a Github issue](https://github.com/franklyinc/frankly-python/issues/new) in this repo!
+Frankly Platform provides a great way for brands to integrate chat in their iOS, Android, and Web apps in order to build and engage their communities. But of course, that's not possible without developers like you. Have ideas for improving the integration experience? Let us know by [creating a Github issue in this repo](https://github.com/franklyinc/frankly-python/issues/new)!
 
 
-##Access & Support
+Access & Support
+----------------
 
 Right now Frankly Platform is limited in access. If you'd like to learn more about how to get access, please reach out to us by emailing [platform-support@franklychat.com](mailto:platform-support@franklychat.com).
 
