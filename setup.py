@@ -5,10 +5,10 @@ import sys
 import imp
 
 if __name__ == '__main__':
-    frankly = imp.load_module('frankly', *imp.find_module('frankly', ['.']))
+    frankly_version = imp.load_module('version', *imp.find_module('version', ['./frankly']))
 
     setup(name              = 'frankly-python',
-          version           = frankly.__version__,
+          version           = frankly_version.__version__,
           description       = 'Frankly Python SDK',
           long_description  = 'The module provides types and functions for interacting with the Frankly API.',
           author            = 'Achille Roussel',
